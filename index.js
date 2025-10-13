@@ -6,13 +6,13 @@ const { Pool } = pkg;
 const app = express();
 app.use(express.json());
 
-// 🗄️ Kết nối PostgreSQL
+// 🧩 Kết nối PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Render yêu cầu SSL
+  ssl: { rejectUnauthorized: false },
 });
 
-// ✅ Tạo bảng nếu chưa có
+// 🧱 Khởi tạo bảng nếu chưa có
 const initDB = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS zalo_users (
@@ -26,22 +26,20 @@ const initDB = async () => {
 };
 initDB();
 
-// ⚙️ API xác thực token Zalo
+// 🔐 API xác thực token Zalo
 app.post("/api/zalo-login", async (req, res) => {
   try {
     const { token, user } = req.body;
+    if (!token) return res.status(400).json({ error: "Missing token" });
 
-    // Gọi API xác minh token của Zalo
+    // ✅ Xác thực token với Zalo Graph API
     const zaloRes = await fetch("https://graph.zalo.me/v2.0/me?fields=id,name", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
-
     const zaloData = await zaloRes.json();
 
     if (zaloData.error) {
-      console.error("Invalid token:", zaloData);
+      console.error("❌ Invalid token:", zaloData);
       return res.status(401).json({ error: "Invalid Zalo token" });
     }
 
@@ -57,19 +55,19 @@ app.post("/api/zalo-login", async (req, res) => {
       [zaloId, name]
     );
 
-    console.log("📝 Saved Zalo user:", zaloId);
+    console.log("📝 Saved user:", zaloId);
 
     res.json({
       message: "Login success",
       zalo_id: zaloId,
-      name
+      name,
     });
   } catch (err) {
-    console.error("Login error:", err);
+    console.error("⚠️ Server error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Khởi chạy server
+// 🚀 Chạy server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
