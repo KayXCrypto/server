@@ -8,7 +8,7 @@ app.use(express.json());
 
 // ✅ Cho phép tất cả domain hoặc chỉ Zalo Mini App
 app.use(cors({
-  origin: ["*", "https://mini.zalo.me"],
+  origin: ["*"],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
 }));
