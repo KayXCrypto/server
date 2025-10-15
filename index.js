@@ -6,12 +6,27 @@ const { Pool } = pkg;
 const app = express();
 app.use(express.json());
 
-// ✅ Cho phép tất cả domain hoặc chỉ Zalo Mini App
+// ✅ Cho phép Zalo Mini App truy cập API
+const allowedOrigins = [
+  "https://mini.zalo.me", // domain chính thức Zalo Mini App
+];
+
 app.use(cors({
-  origin: ["*"],
-  methods: ["GET", "POST"],
+  origin: (origin, callback) => {
+    // Cho phép gọi từ Zalo hoặc từ tool dev (khi test)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
+  methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"],
+  credentials: true,
 }));
+
+// ✅ Đảm bảo phản hồi cả preflight request
+app.options("*", cors());
 
 // 🧩 Kết nối PostgreSQL
 const pool = new Pool({
@@ -33,24 +48,23 @@ const initDB = async () => {
 };
 initDB();
 
-// 🚀 API kiểm tra server hoạt động
+// 🚀 Kiểm tra server hoạt động
 app.get("/", (req, res) => {
   res.json({ message: "Zalo Mini App server is running 🚀" });
 });
 
-// 🔐 API lưu user không cần token
+// 🔐 API lưu user
 app.post("/api/zalo-login", async (req, res) => {
   try {
     console.log("📩 Nhận request:", req.body);
-
     const { user } = req.body;
+
     if (!user || !user.id || !user.name) {
       return res.status(400).json({ error: "Thiếu thông tin người dùng" });
     }
 
     const loginTime = new Date().toISOString();
 
-    // 🧠 Lưu dữ liệu
     await pool.query(
       `INSERT INTO zalo_users (zalo_id, name, login_time)
        VALUES ($1, $2, $3)`,
